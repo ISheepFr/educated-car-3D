@@ -18,10 +18,11 @@ import HondaFK8 from "./components/car/HondaFK8";
 export default function App() {
   const [hoodOpen, setHoodOpen] = useState(false);
   const [trunkOpen, setTrunkOpen] = useState(false);
+  const [leftdoorOpen, setLeftDoorOpen] = useState(false);
   const [hoodColor, setHoodColor] = useState("#ffffff");
   const [trunkColor, setTrunkColor] = useState("#ffffff");
-  const [hoveredObject, setHoveredObject] =
-    useState<THREE.Object3D | null>(null);
+  const [leftdoorColor, setLeftDoorColor] = useState("#ffffff");
+  const [hoveredObjects, setHoveredObjects] = useState<THREE.Object3D[]>([]);
 
   const colors = [
     { name: "Blanc", value: "#ffffff" },
@@ -30,6 +31,12 @@ export default function App() {
     { name: "Noir", value: "#111111" },
     { name: "Gris", value: "#777777" },
   ];
+
+  function setBodyColor(color: string) {
+    setHoodColor(color);
+    setTrunkColor(color);
+    setLeftDoorColor(color);
+  }
 
   return (
     <div
@@ -76,7 +83,12 @@ export default function App() {
               }
               hoodColor={hoodColor}
               trunkColor={trunkColor}
-              onHover={setHoveredObject}
+              leftdoorOpen={leftdoorOpen}
+              onToggleLeftDoor={() =>
+                setLeftDoorOpen((prev) => !prev)
+              }
+              leftdoorColor={leftdoorColor}
+              onHover={setHoveredObjects}
             />
           </Bounds>
 
@@ -85,7 +97,7 @@ export default function App() {
 
         <EffectComposer autoClear={false} multisampling={4}>
           <Outline
-            selection={hoveredObject ? [hoveredObject] : []}
+            selection={hoveredObjects}
             visibleEdgeColor={0xff7a00}
             hiddenEdgeColor={0xff7a00}
             edgeStrength={100}
@@ -151,6 +163,35 @@ export default function App() {
           Couleur carrosserie
         </p>
 
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            marginBottom: 14,
+            fontSize: 13,
+            color: "#a5aab5",
+          }}
+        >
+          Palette personnalisée
+          <input
+            type="color"
+            value={hoodColor}
+            aria-label="Choisir une couleur personnalisée"
+            onChange={(event) => setBodyColor(event.target.value)}
+            style={{
+              width: 42,
+              height: 32,
+              padding: 2,
+              border: "1px solid #555555",
+              borderRadius: 6,
+              background: "transparent",
+              cursor: "pointer",
+            }}
+          />
+        </label>
+
         {/* Boutons de couleur */}
         <div
           style={{
@@ -166,10 +207,7 @@ export default function App() {
               title={color.name}
               aria-label={color.name}
               aria-pressed={hoodColor === color.value}
-              onClick={() => {
-                setHoodColor(color.value);
-                setTrunkColor(color.value);
-              }}
+              onClick={() => setBodyColor(color.value)}
               style={{
                 width: 30,
                 height: 30,
@@ -219,6 +257,24 @@ export default function App() {
           }}
         >
           {trunkOpen ? "Fermer le coffre" : "Ouvrir le coffre"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setLeftDoorOpen((prev) => !prev)}
+          style={{
+            width: "100%",
+            padding: "12px",
+            background: "#ffffff",
+            color: "#171b22",
+            border: "none",
+            borderRadius: 8,
+            cursor: "pointer",
+            fontWeight: 600,
+            marginTop: 12,
+          }}
+        >
+          {leftdoorOpen ? "Fermer la porte gauche" : "Ouvrir la porte gauche"}
         </button>
       </div>
 

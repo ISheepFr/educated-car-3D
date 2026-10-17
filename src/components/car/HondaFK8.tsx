@@ -10,13 +10,17 @@ interface HondaFK8Props {
   hoodOpen: boolean;
   onToggleHood: () => void;
   hoodColor: string;
-  onHover: (object: THREE.Object3D | null) => void;
+  leftdoorOpen: boolean;
+  onToggleLeftDoor: () => void;
+  leftdoorColor: string;
+  onHover: (objects: THREE.Object3D[]) => void;
 }
 
 const PAINT_PARTS = [
   "ADD_hood",
   "ORIGIN_BODY",
   "ADD_ORIGIN_BODY001",
+  "ADD_LEFTDOOR",
 ];
 
 export default function HondaFK8({
@@ -26,18 +30,24 @@ export default function HondaFK8({
   hoodOpen,
   onToggleHood,
   hoodColor,
+  leftdoorOpen,
+  onToggleLeftDoor,
+  leftdoorColor,
   onHover,
 }: HondaFK8Props) {
   const { scene } = useGLTF("/educated-car-3D/models/honda-fk8-new.glb");
 
   const hood = useRef<THREE.Object3D | null>(null);
   const trunk = useRef<THREE.Object3D | null>(null);
+  const leftDoor = useRef<THREE.Object3D | null>(null);
   const initialRotation = useRef(0);
   const initialTrunkRotation = useRef(0);
+  const initialLeftDoorRotation = useRef(0);
 
   useEffect(() => {
     const hoodObject = scene.getObjectByName("ADD_hood");
     const trunkObject = scene.getObjectByName("trunk");
+    const leftDoorObject = scene.getObjectByName("left_door");
 
     if (hoodObject) {
       hood.current = hoodObject;
@@ -49,9 +59,15 @@ export default function HondaFK8({
       initialTrunkRotation.current = trunkObject.rotation.x;
     }
 
+    if (leftDoorObject) {
+      leftDoor.current = leftDoorObject;
+      initialLeftDoorRotation.current = leftDoorObject.rotation.y;
+    }
+
     return () => {
       hood.current = null;
       trunk.current = null;
+      leftDoor.current = null;
     };
   }, [scene]);
 
@@ -61,7 +77,12 @@ export default function HondaFK8({
       const object = scene.getObjectByName(partName);
       if (!object) return;
 
-      const colorTarget = partName === "ADD_ORIGIN_BODY001" ? trunkColor : hoodColor;
+      const colorTarget =
+        partName === "ADD_ORIGIN_BODY001"
+          ? trunkColor
+          : partName === "ADD_LEFTDOOR"
+            ? leftdoorColor
+            : hoodColor;
 
       object.traverse((child) => {
         if (!(child instanceof THREE.Mesh)) return;
@@ -85,7 +106,7 @@ export default function HondaFK8({
         });
       });
     });
-  }, [scene, hoodColor, trunkColor]);
+  }, [scene, hoodColor, trunkColor, leftdoorColor]);
 
   // Animation capot / coffre
   useFrame((_, delta) => {
@@ -108,6 +129,17 @@ export default function HondaFK8({
         delta
       );
     }
+
+    if (leftDoor.current) {
+      const target =
+        initialLeftDoorRotation.current + (leftdoorOpen ? -Math.PI / 3 : 0);
+      leftDoor.current.rotation.y = THREE.MathUtils.damp(
+        leftDoor.current.rotation.y,
+        target,
+        4,
+        delta
+      );
+    }
   });
 
   // Identifier la pièce interactive
@@ -115,11 +147,14 @@ export default function HondaFK8({
     let current: THREE.Object3D | null = object;
 
     while (current) {
-      if (
-        current.name === "ADD_hood" ||
-        current.name === "ADD_ORIGIN_BODY001" ||
-        current.name === "trunk"
-      ) {
+      const name = current.name.toUpperCase();
+      if ([
+        "ADD_HOOD",
+        "ADD_ORIGIN_BODY001",
+        "TRUNK",
+        "ADD_LEFTDOOR",
+        "ADD_LEFTDOOR_MIRROR",
+      ].includes(name)) {
         return current;
       }
 
@@ -130,6 +165,25 @@ export default function HondaFK8({
     return null;
   }
 
+  function getHoverObjects(part: THREE.Object3D): THREE.Object3D[] {
+    if (
+      part.name.toUpperCase() !== "ADD_LEFTDOOR" &&
+      part.name.toUpperCase() !== "ADD_LEFTDOOR_MIRROR"
+    ) {
+      return [part];
+    }
+
+    const doorParts: THREE.Object3D[] = [];
+    scene.traverse((object) => {
+      const name = object.name.toUpperCase();
+      if (name === "ADD_LEFTDOOR" || name === "ADD_LEFTDOOR_MIRROR") {
+        doorParts.push(object);
+      }
+    });
+
+    return doorParts.length > 0 ? doorParts : [part];
+  }
+
   return (
     <primitive
       object={scene}
@@ -138,15 +192,15 @@ export default function HondaFK8({
 
         if (part) {
           event.stopPropagation();
-          onHover(part);
+          onHover(getHoverObjects(part));
           document.body.style.cursor = 'pointer';
         } else {
-          onHover(null);
+          onHover([]);
           document.body.style.cursor = 'auto';
         }
       }}
       onPointerOut={() => {
-        onHover(null);
+        onHover([]);
         document.body.style.cursor = 'auto';
       }}
       onClick={(event: { object: THREE.Object3D; stopPropagation: () => void }) => {
@@ -163,10 +217,18 @@ export default function HondaFK8({
 
         if (part.name === 'ADD_hood') {
           onToggleHood();
+          return;
+        }
+
+        if (
+          part.name.toUpperCase() === "ADD_LEFTDOOR" ||
+          part.name.toUpperCase() === "ADD_LEFTDOOR_MIRROR"
+        ) {
+          onToggleLeftDoor();
         }
       }}
     />
   );
 }
 
-useGLTF.preload('/educated-car-3D/models/honda-fk8.glb');
+useGLTF.preload('/educated-car-3D/models/honda-fk8-new.glb');
